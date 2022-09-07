@@ -93,9 +93,12 @@ const defaultActions = {
 
 const defaultClasses = {
   actionbar: 'pell-actionbar',
-  button: 'pell-button',
+  button: {
+    default: 'pell-button',
+    inactive: 'pell-button-inactive',
+    active: 'pell-button-active',
+  },
   content: 'pell-content',
-  selected: 'pell-button-selected'
 }
 
 export const init = settings => {
@@ -109,7 +112,17 @@ export const init = settings => {
     )
     : Object.keys(defaultActions).map(action => defaultActions[action])
 
+  // Backwards compatability
+  if (typeof settings.classes.button !== 'object'){
+    settings.classes.button = {
+      default: settings.classes.button ?? defaultClasses.button.default,
+      active: settings.classes.selected ?? defaultClasses.button.active,
+      inactive: defaultClasses.button.inactive,
+    }
+  }
+  // end of backwards compat
   const classes = { ...defaultClasses, ...settings.classes }
+
 
   const defaultParagraphSeparator = settings[defaultParagraphSeparatorString] || 'div'
 
@@ -134,17 +147,22 @@ export const init = settings => {
 
   actions.forEach(action => {
     const button = createElement('button')
-    button.className = classes.button
+    // add both in. active means removing the inactive and adding in the active class
+    button.className = classes.button.default + " " + classes.button.inactive
     button.innerHTML = action.icon
     button.title = action.title
     button.setAttribute('type', 'button')
     button.onclick = () => action.result() && content.focus()
 
     if (action.state) {
-      const handler = () => button.classList[action.state() ? 'add' : 'remove'](classes.selected)
+      const handler = () => {
+        button.classList[action.state() ? 'add' : 'remove'](classes.button.active)
+        button.classList[!action.state() ? 'add' : 'remove'](classes.button.inactive)
+      }
       addEventListener(content, 'keyup', handler)
       addEventListener(content, 'mouseup', handler)
       addEventListener(button, 'click', handler)
+      handler()
     }
 
     appendChild(actionbar, button)
